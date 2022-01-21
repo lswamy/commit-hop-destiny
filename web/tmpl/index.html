@@ -1,0 +1,139 @@
+<!doctype html>
+<html class="no-js" lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>Destiny HOP APP</title>
+  <meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <meta property="og:title" content="">
+  <meta property="og:type" content="">
+  <meta property="og:url" content="">
+  <meta property="og:image" content="">
+
+  <link rel="apple-touch-icon" href="icon.png">
+
+  <meta name="theme-color" content="#fafafa">
+
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+
+
+</head>
+
+<body data-characterid="{{.MainCharacterId}}">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-4">
+                {{range $i, $a := .Activities}}
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-title">
+                            <span>{{$a.Definition.DisplayProperties.Name}}</span>
+                        </div>
+                        {{if $a.ReferenceDefinition}}
+                        <div class="card-subtitle mb-2 text-muted text-small">{{$a.ReferenceDefinition.DisplayProperties.Name}}</div>
+                        {{end}}
+                        <p class="card-text">
+                            <span>{{$a.Period}}</span><br />
+                            <button class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#collapse-{{$a.InstanceId}}">Show Activity Results</button>
+                        </p>
+                        <div class="collapse" id="collapse-{{$a.InstanceId}}">
+                            <table class="table">
+                                <tbody>
+                                    {{range $j, $e := $a.PgcrEntries}}
+                                    {{$rowClass := ""}}
+                                    {{if isSameCharacter $.MainCharacterId $e.CharacterId}}
+                                        {{$rowClass = "table-active"}}
+                                    {{end}}
+                                    <tr class="{{$rowClass}}" data-characterid="{{$e.CharacterId | numToStr}}">
+                                        <td>{{$e.Player.DestinyUserInfo.DisplayName}}</td>
+                                        <td>{{$e.Player.CharacterClass}}</td>
+                                        <td>{{$e.Player.LightLevel}}</td>
+                                        <td>{{$e.Score.Basic.Value}}</td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
+                        <a href="javascript:void(0);" class="btn btn-primary">A Link</a>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-link btn-small" data-bs-toggle="collapse" data-bs-target="#collapse-all-weapons">Show Table</button>
+                <div class="collapse" id="collapse-all-weapons">
+                    <table class="table">
+                        <tbody>
+                            {{range $w, $e := $.WeaponKills}}
+                            {{$weaponDef := index $.WeaponDefs $w}}
+                            <tr>
+                                <td>{{$w}}</td>
+                                <td>{{$weaponDef.DisplayProperties.Name}}</td>
+                                <td>{{$e}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
+
+                <canvas id="all-weapons-chart"></canvas>
+            </div>
+            <div class="col-md-4">
+                <table class="table" id="all-weapons-table">
+                    <tbody>
+                        {{range $w, $e := $.CharacterStats.WeaponKills}}
+                        {{$weaponDef := index $.WeaponDefs $w}}
+                        <tr>
+                            <td data-weapon-id="{{$w}}">{{$w}}</td>
+                            <td data-weapon-name="{{$weaponDef.DisplayProperties.Name}}">{{$weaponDef.DisplayProperties.Name}}</td>
+                            <td data-weapon-value="{{$e}}">{{$e}}</td>
+                        </tr>
+                        {{end}}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+  <script type="text/JavaScript">
+      const DestinyCharts = {
+          randomNum: function(min, max) { return Math.floor(Math.random() * (max - min + 1) + min) },
+          randomRGB: function(min, max) {
+            let rgb = [this.randomNum(min, max), this.randomNum(min, max), this.randomNum(min, max)];
+            return `rgb(${rgb.join(",")})`;
+          },
+          randomColors: function(numColors) {
+              let colors = [];
+              for (let i=0; i<numColors; i++) {
+                  colors.push(this.randomRGB(52, 235))
+              }
+              return colors
+          } 
+      }
+      
+      var  allWeaponsData = {{$.JsonData.allWeapons}};
+      var allWeaponsCanvas = document.getElementById("all-weapons-chart");
+      var allWeaponsChart = new Chart(allWeaponsCanvas, {
+          type: "doughnut",
+          data: {
+              labels: Object.keys(allWeaponsData),
+              datasets: [{
+                label: "All Weapons",
+                data: Object.values(allWeaponsData),
+                backgroundColor: DestinyCharts.randomColors(Object.keys(allWeaponsData).length)
+              }]
+          }
+      });
+
+      window.addEventListener("DOMContentLoaded", (event) => {
+          var characterId = "{{.MainCharacterId}}";
+      });
+  </script>
+
+</body>
+
+</html>
