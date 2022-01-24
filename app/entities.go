@@ -27,6 +27,14 @@ type PGCRResponse struct {
 	Response DestinyPostGameCarnageReportData
 }
 
+type CharacterResponse struct {
+	Response DestinyCharacterResponse
+}
+
+type ProfileResponse struct {
+	Response DestinyProfileResponse
+}
+
 type DestinyActivityHistoryResults struct {
 	Activities []DestinyHistoricalStatsPeriodGroup
 }
@@ -135,4 +143,62 @@ type InventoryItemDefinition struct {
 	ItemType                   int32
 	ItemSubType                int32
 	ClassType                  int32
+}
+
+type DestinyCharacterResponse struct {
+	Character SingleComponentResponseOfDestinyCharacterComponent	
+}
+
+type SingleComponentResponseOfDestinyCharacterComponent struct {
+	Data DestinyCharacterComponent
+	Privacy int32
+	Disabled bool
+}
+
+type DestinyColor struct {
+	Red byte
+	Green byte
+	Blue byte
+	Alpha byte
+}
+
+type DestinyCharacterComponent struct {
+	MembershipId json.Number
+	MembershipType int32
+	CharacterId json.Number
+	DateLastPlayed string
+	MinutesPlayedThisSession json.Number
+	MinutesPlayedTotal json.Number
+	Light int32
+	Stats map[uint32]int32
+	RaceHash uint32
+	GenderHash uint32
+	ClassHash uint32
+	RaceType int32
+	ClassType int32
+	GenderType int32
+	EmblemPath string
+	EmblemBackgroundPath string
+	EmblemHash uint32
+	EmblemColor DestinyColor
+	// LevelProgression string
+	BaseCharacterLevel int32
+	PercentToNextLevel float32
+	TitleRecordHash uint32
+}
+
+type DestinyProfileResponse struct {
+	Profile SingleComponentResponseOfDestinyProfileComponent
+}
+
+type SingleComponentResponseOfDestinyProfileComponent struct {
+	Data DestinyProfileComponent
+	Privacy int32
+	Disabled bool
+}
+
+type DestinyProfileComponent struct {
+	UserInfo UserInfoCard
+	DateLastPlayed string
+	CharacterIds []int64
 }

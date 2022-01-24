@@ -18,7 +18,6 @@ func NewSqliteDB(db *sql.DB) *SQLiteDB {
 }
 
 func (db *SQLiteDB) GetActivityDefinition(activityId int32) ActivityDefinition {
-	fmt.Printf("searching for %d \n", activityId)
 	row := db.DB.QueryRow("SELECT * FROM DestinyActivityDefinition WHERE id = ?", activityId)
 	var id int32
 	var jsonContent string
