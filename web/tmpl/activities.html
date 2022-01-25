@@ -1,82 +1,104 @@
 <div class="row" id="content">
-    <div class="col-md-4">
-        <div id="recent-activities">
-            {{range $i, $a := .Activities}}
-                <div class="card">
-                    <div class="card-body">
-                        <div class="card-title">
-                            <span>{{$a.Definition.DisplayProperties.Name}}</span>
-                            {{if $a.ReferenceDefinition}}
-                            <span class="text-muted"> {{$a.ReferenceDefinition.DisplayProperties.Name}}</span>
-                            {{end}}
-                        </div>
-                        <p class="card-text">
-                            <span>{{$a.Period}}</span><br />
-                            <button class="btn btn-link btn-small" data-bs-toggle="collapse" data-bs-target="#collapse-{{$a.InstanceId}}">Show Activity Results</button>
-                        </p>
-                        <div class="collapse" id="collapse-{{$a.InstanceId}}">
-                            <table class="table">
-                                <tbody>
-                                    {{range $j, $e := $a.PgcrEntries}}
-                                    {{$rowClass := ""}}
-                                    {{if isSameCharacter $.MainCharacterId $e.CharacterId}}
-                                        {{$rowClass = "table-active"}}
-                                    {{end}}
-                                    <tr class="{{$rowClass}}" data-characterid="{{$e.CharacterId | numToStr}}">
-                                        <td>{{$e.Player.DestinyUserInfo.DisplayName}}</td>
-                                        <td>{{$e.Player.CharacterClass}}</td>
-                                        <td>{{$e.Player.LightLevel}}</td>
-                                        <td>{{$e.Score.Basic.Value}}</td>
-                                    </tr>
-                                    {{end}}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-                {{end}}
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div id="weapon-stats">
-            <button class="btn btn-link btn-small" data-bs-toggle="collapse" data-bs-target="#collapse-all-weapons">Show Table</button>
+    <div class="col-md-9">
+       
+        <section id="performance" class="mt-5">
+            <div id="character-performance">
+                <h3>Latest Activity Performance</h3>
+                <canvas id="performance-timeline-chart"></canvas>
+            </div>
+
+            <script type="text/javascript">
+                var characterWeaponsData = {{$.JsonData.characterWeapons}};
+            </script>
+        </section>
+
+        <section id="weapon-stats" class="mt-5">
+            <div id="weapon-breakdown">
+                <h3>Weapon Performance</h3>
+                <p class="lead">Kills with each unique weapon by all players in recent activities.</p>
+                <canvas id="all-weapons-chart"></canvas>
+
+                <button class="btn btn-link btn-small" data-bs-toggle="collapse" data-bs-target="#collapse-all-weapons">Show Table</button>
                 <div class="collapse" id="collapse-all-weapons">
                     <table class="table">
                         <tbody>
-                            {{range $w, $e := $.WeaponKills}}
-                            {{$weaponDef := index $.WeaponDefs $w}}
+                            {{range $weaponName, $weaponValue := $.WeaponKills}}
                             <tr>
-                                <td>{{$w}}</td>
-                                <td>{{$weaponDef.DisplayProperties.Name}}</td>
-                                <td>{{$e}}</td>
+                                <td>{{$weaponName}}</td>
+                                <td>{{$weaponValue}}</td>
                             </tr>
                             {{end}}
                         </tbody>
                     </table>
                 </div>
-
-                <canvas id="all-weapons-chart"></canvas>
+            </div>
+            <div id="weapon-type-breakdown" class="mt-5">
+                <h3>Weapon Types</h3>
+                <p class="lead">Kills grouped by weapon type by all players in recent activities.</p>
                 <canvas id="weapons-type-chart"></canvas>
-                <script type="text/javascript">
-                    var allWeaponsData = {{$.JsonData.allWeapons}};
-                    var allWeaponsTypesData = {{$.JsonData.allWeaponsTypes}};
-                </script>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div id="character-stats">
-            <table class="table" id="all-weapons-table">
+            </div>
+            
+            <script type="text/javascript">
+                var allWeaponsData = {{$.JsonData.allWeapons}};
+                var allWeaponsTypesData = {{$.JsonData.allWeaponsTypes}};
+            </script>
+        </section>
+                
+        <section id="character-stats" class="mt-5">
+            <h3>Character Weapon Kills</h3>
+            <p class="lead">Kills with unique weapons by current player in recent activities.</p>
+            <!-- <table class="table" id="all-weapons-table">
                 <tbody>
-                    {{range $w, $e := $.CharacterStats.WeaponKills}}
-                    {{$weaponDef := index $.WeaponDefs $w}}
+                    {{range $weaponName, $weaponValue := $.CharacterStats.WeaponKills}}
                     <tr>
-                        <td data-weapon-id="{{$w}}">{{$w}}</td>
-                        <td data-weapon-name="{{$weaponDef.DisplayProperties.Name}}">{{$weaponDef.DisplayProperties.Name}}</td>
-                        <td data-weapon-value="{{$e}}">{{$e}}</td>
+                        <td data-weapon-name="{{$weaponName}}">{{$weaponName}}</td>
+                        <td data-weapon-value="{{$weaponValue}}">{{$weaponValue}}</td>
                     </tr>
                     {{end}}
                 </tbody>
-            </table>
+            </table> -->
+            <canvas id="character-weapons-chart"></canvas>
+        </section>
+    </div>
+    <div class="col-md-3">
+        <div class="row">
+            <div class="col-md-12">
+                <section id="recent-activities" class="mt-5">
+                    <h3>Recent Activity</h3>
+                    {{range $i, $a := .Activities}}
+                        <div class="activity border-top border-2">
+                            <div class="row">
+                                <div class="col-md-6 activity-name" data-bs-toggle="collapse" data-bs-target="#collapse-{{$a.InstanceId}}">
+                                    <span>{{$a.Definition.DisplayProperties.Name}}</span>
+                                    {{if $a.ReferenceDefinition}}
+                                    <span class="text-muted"> {{$a.ReferenceDefinition.DisplayProperties.Name}}</span>
+                                    {{end}}
+                                </div>
+                                <div class="col-md-6 text-end activity-date">{{$a.Period}}</div>
+                            </div>
+                            
+                            <div class="collapse show" id="collapse-{{$a.InstanceId}}">
+                                <table class="table">
+                                    <tbody>
+                                        {{range $j, $e := $a.PgcrEntries}}
+                                        {{$rowClass := ""}}
+                                        {{if isSameCharacter $.MainCharacterId $e.CharacterId}}
+                                            {{$rowClass = "table-active"}}
+                                        {{end}}
+                                        <tr class="{{$rowClass}} team-{{$e.Values.team.Basic.DisplayValue}}" data-characterid="{{$e.CharacterId | numToStr}}">
+                                            <td>{{$e.Player.DestinyUserInfo.DisplayName}} <span class="text-muted">{{$e.Player.CharacterClass}}</span></td>
+                                            <td>{{$e.Score.Basic.Value}}</td>
+                                        </tr>
+                                        {{end}}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {{end}}
+                    </section>
+            </div>
+
         </div>
     </div>
+    
 </div>

@@ -80,7 +80,7 @@ type DestinyPostGameCarnageReportEntry struct {
 	Score       DestinyHistoricalStatsValue
 	Player      DestinyPlayer
 	CharacterId json.Number
-	Values      DestinyHistoricalStatsValue
+	Values      map[string]DestinyHistoricalStatsValue
 	Extended    DestinyPostGameCarnageReportExtendedData
 }
 
@@ -200,5 +200,5 @@ type SingleComponentResponseOfDestinyProfileComponent struct {
 type DestinyProfileComponent struct {
 	UserInfo UserInfoCard
 	DateLastPlayed string
-	CharacterIds []int64
+	CharacterIds []json.Number
 }

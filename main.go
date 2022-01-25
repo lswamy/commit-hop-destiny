@@ -24,7 +24,7 @@ const ApiRootPath string = "https://www.bungie.net"
 const DestinyMembershipType int = 2
 const ActivityModeTypePve int = 7
 const ActivityModeTypePvp int = 5
-const NumActivities int = 5
+const NumActivities int = 10
 
 var cwd, _ = os.Getwd()
 var worldContent *app.SQLiteDB
@@ -33,12 +33,14 @@ type PageContent struct {
 	Name            string
 	MainCharacterId int64
 	Activities      []ActivityData
-	WeaponKills     map[int64]float32
+	WeaponKills     map[string]float32
 	WeaponTypeKills map[string]float32
 	WeaponDefs      map[int64]app.InventoryItemDefinition
 	WeaponTypeNames map[string]string
 	CharacterStats  struct {
-		WeaponKills map[int64]float32
+		WeaponKills map[string]float32
+		WeaponTypeKills map[string]float32
+		PerformanceTimeline []float32
 	}
 	JsonData map[string]string
 }
@@ -63,7 +65,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	
 	content := ProfileContent{}
 
-	profileComponents := []string{"Profile"}
+	profileComponents := []string{"Profiles"}
 	charComponents := []string{"Characters"}
 	
 	fmt.Println("requesting profile...")
@@ -72,8 +74,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("requesting character...")
 	content.CharacterData = requestCharacter(int32(DestinyMembershipType), int64(destinyMembershipId), int64(destinyCharacterId), charComponents)
 	
-	// s, _ := json.MarshalIndent(content.CharacterData.Character.Data.EmblemColor, "", "\t")
-	// fmt.Print(string(s))
+	s, _ := json.MarshalIndent(content.Data, "", "\t")
+	fmt.Print(string(s))
 
 	content.Color = rgbContrast(
 		content.CharacterData.Character.Data.EmblemColor.Red,
@@ -90,6 +92,17 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		"joinInts": func(nums []int, delim string) string {
 			return strings.Trim(strings.Join(strings.Split(fmt.Sprint(nums), " "), delim), "[]")
 		},
+		"characterClassName": func(classType int32) string {
+			if classType == 0 {
+				return "Titan"
+			} else if classType == 1 {
+				return "Hunter"
+			} else if classType == 2 {
+				return "Warlock"
+			} else {
+				return ""
+			}
+		},
 	}).ParseFiles(tplPath))
 	if tplErr := tpl.Execute(w, content); tplErr != nil {
 		fmt.Println(("exec err"))
@@ -104,10 +117,13 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 	pageContent := PageContent{}
 	pageContent.MainCharacterId = int64(destinyCharacterId)
 	pageContent.Activities = make([]ActivityData, 0)
-	pageContent.WeaponKills = make(map[int64]float32)
+	pageContent.WeaponKills = make(map[string]float32)
 	pageContent.WeaponTypeKills = make(map[string]float32)
-	pageContent.CharacterStats.WeaponKills = make(map[int64]float32)
+	pageContent.CharacterStats.WeaponKills = make(map[string]float32)
+	pageContent.CharacterStats.WeaponTypeKills = make(map[string]float32)
+	pageContent.CharacterStats.PerformanceTimeline = make([]float32, 0)
 	pageContent.JsonData = make(map[string]string)
+	pageContent.WeaponDefs = make(map[int64]app.InventoryItemDefinition)
 
 	// s, _ := json.MarshalIndent(pageContent, "", "\t")
 	// fmt.Print(string(s))
@@ -142,11 +158,31 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 			for _, weapon := range entry.Extended.Weapons {
 				weaponId, _ := weapon.ReferenceId.Int64()
 				uniqueKills := weapon.Values["uniqueWeaponKills"].Basic.Value
-				pageContent.WeaponKills[weaponId] += uniqueKills
+				
+				var itemName string
+				var itemType string
+				weaponDef, ok := pageContent.WeaponDefs[weaponId]; 
+				if ok {
+					itemName = weaponDef.DisplayProperties.Name
+					itemType = weaponDef.ItemTypeDisplayName
+				} else {
+					weaponDef := worldContent.GetInventoryItemDefinition(int32(weaponId))
+					itemName = weaponDef.DisplayProperties.Name
+					itemType = weaponDef.ItemTypeDisplayName
+					pageContent.WeaponDefs[weaponId] = weaponDef
+				}
+					
+				pageContent.WeaponKills[itemName] += uniqueKills
+				pageContent.WeaponTypeKills[itemType] += uniqueKills
 
 				if entryCharId == int64(destinyCharacterId) {
-					pageContent.CharacterStats.WeaponKills[weaponId] += uniqueKills
+					pageContent.CharacterStats.WeaponKills[itemName] += uniqueKills
+					pageContent.CharacterStats.WeaponTypeKills[itemType] += uniqueKills
 				}
+			}
+
+			if entryCharId == int64(destinyCharacterId) {
+				pageContent.CharacterStats.PerformanceTimeline = append([]float32{entry.Score.Basic.Value}, pageContent.CharacterStats.PerformanceTimeline...)
 			}
 		}
 
@@ -155,17 +191,20 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 		pageContent.JsonData["allWeapons"] = string(allWeaponsJson)
 	}
 
-	pageContent.WeaponDefs = make(map[int64]app.InventoryItemDefinition)
-	for weaponId := range pageContent.WeaponKills {
-		def := worldContent.GetInventoryItemDefinition(int32(weaponId))
-		itemType := def.ItemTypeDisplayName
-		pageContent.WeaponDefs[weaponId] = def
-		pageContent.WeaponTypeKills[itemType] += pageContent.WeaponKills[weaponId]
-	}
+	
+	// for weaponId := range pageContent.WeaponKills {
+	// 	def := worldContent.GetInventoryItemDefinition(int32(weaponId))
+	// 	itemType := def.ItemTypeDisplayName
+	// 	pageContent.WeaponDefs[weaponId] = def
+	// 	pageContent.WeaponTypeKills[itemType] += pageContent.WeaponKills[weaponId]
+	// }
 	allWeaponsTypesJson, _ := json.Marshal(pageContent.WeaponTypeKills)
 	pageContent.JsonData["allWeaponsTypes"] = string(allWeaponsTypesJson)
 
-	// cwd, _ := os.Getwd()
+	characterWeaponsJson, _ := json.Marshal(pageContent.CharacterStats)
+	pageContent.JsonData["characterWeapons"] = string(characterWeaponsJson)
+
+
 	tplPath := cwd + "/web/tmpl/activities.html"
 	tpl := template.Must(template.New("activities.html").Funcs(template.FuncMap{
 		"isSameCharacter": func(characterId int64, entryCharacterId json.Number) bool {
@@ -220,10 +259,14 @@ func main() {
 	worldContent = app.NewSqliteDB(db)
 	fmt.Println("got world content")
 
+	fs := http.FileServer(http.Dir(cwd + "/web/assets/"))
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", indexHandler)
 	mux.HandleFunc("/character", characterHandler)
 	mux.HandleFunc("/activities", activitiesHandler)
+	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+
 	log.Fatal(http.ListenAndServe(":"+strconv.Itoa(HttpPort), mux))
 }
 
