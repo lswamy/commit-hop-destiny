@@ -37,6 +37,7 @@ type PageContent struct {
 	WeaponTypeKills map[string]float32
 	WeaponDefs      map[int64]app.InventoryItemDefinition
 	WeaponTypeNames map[string]string
+	TopScores		[]float32
 	CharacterStats  struct {
 		WeaponKills map[string]float32
 		WeaponTypeKills map[string]float32
@@ -119,6 +120,7 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 	pageContent.Activities = make([]ActivityData, 0)
 	pageContent.WeaponKills = make(map[string]float32)
 	pageContent.WeaponTypeKills = make(map[string]float32)
+	pageContent.TopScores = make([]float32, 0)
 	pageContent.CharacterStats.WeaponKills = make(map[string]float32)
 	pageContent.CharacterStats.WeaponTypeKills = make(map[string]float32)
 	pageContent.CharacterStats.PerformanceTimeline = make([]float32, 0)
@@ -152,6 +154,8 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 
 		pgcr := requestPostGameCarnageReport(instanceId)
 		ad.PgcrEntries = pgcr.Entries
+
+		pageContent.TopScores = append([]float32{pgcr.Entries[0].Score.Basic.Value}, pageContent.TopScores...)
 
 		for _, entry := range pgcr.Entries {
 			entryCharId, _ := entry.CharacterId.Int64()
@@ -204,6 +208,8 @@ func activitiesHandler(w http.ResponseWriter, r *http.Request) {
 	characterWeaponsJson, _ := json.Marshal(pageContent.CharacterStats)
 	pageContent.JsonData["characterWeapons"] = string(characterWeaponsJson)
 
+	topScoresJson, _ := json.Marshal(pageContent.TopScores)
+	pageContent.JsonData["topScores"] = string(topScoresJson)
 
 	tplPath := cwd + "/web/tmpl/activities.html"
 	tpl := template.Must(template.New("activities.html").Funcs(template.FuncMap{
